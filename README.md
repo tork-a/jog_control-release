@@ -1,238 +1,318 @@
-# Overview [![Build Status](https://travis-ci.org/tork-a/jog_control.svg?branch=master)](https://travis-ci.org/tork-a/jog_control)
+# jog_controller
 
-[ROS](http://www.ros.org) and [MoveIt!](http://moveit.ros.org) are
-very powerful tools for industrial manipulators. Many people use ROS
-packages to control their own industrial manipulators. You can see
-many manipulators are available on
-[ROS-Industrial project](https://rosindustrial.org).
+This package contains controller nodes for jog control. For now, it
+has two indivisual nodes, 'jog_joint_node' and 'frame_joint_node'.
 
-However, ROS has several missing features for industrial usage. The
-one is "jogging". Jogging is to make the actual robot move by small
-amount of distance. We can repeat jogging to adjust the robot to teach
-target position and posture.
+Both nodes depend on MoveIt!, so you should make sure MoveIt! is
+available for your robot in advance.
 
-Most commercial industrial robots have their own jog control in the
-teaching pendants. Some ROS oriented robot has no teaching pendant and
-no jog control, so it can be a big barrier to use ROS for industrial
-usage.
+Both nodes use `PositionController` which is provided by
+`ros_controllers/joint_trajectory_controller` package.
 
-This `jog_control` repositry has packages for jog control
-(reasonably). You can jog your robot by rviz jog panel, joypads,
-keyboards, and teaching pendants using these packages.
+## jog_joint_node
 
-# Quick start
+'jog_joint_node' is for joint jogging. Joint jogging is to adjust the
+target joint angle by small amount of displacement. You can send
+[`JogJoint` message](https://github.com/tork-a/jog_control/blob/master/jog_msgs/msg/JogJoint.msg)
+to command the target joint and differential angle (delta).
 
-You can see the idea of jog_control package by demo in `jog_launch`
-package. It uses simulation and MoveIt!. Some robots are from
-[ROS-Industrial repositry](https://github.com/ros-industrial), which
-you need to build from source code.
+### Subscribed topic
 
-# How to install
+- joint_states (sensor_msgs/JointState)
 
-## Install from binary (in the future)
+  Current joint states (angle, velocity, acceleration)
 
-This package is not released yet. When it is released, you can install
-by apt command.
+- jog_joint (jog_msgs/JogJoint)
+  
+  Joint jog command
+
+### Required service / action
+
+This package uses position_cotnroller to control joint angles. It read
+the controller configuration form MoveIt! parameter
+(move_group/controller_list), so MoveIt! should be available before
+this node starting.
+  
+- follow_joint_trajecotry/goal (control_msgs/FollowJointTrajectoryAction)
+
+  The goal joint angle to control
+
+## jog_frame_node
+
+'jog_frame_node' is for frame jogging. Frame jogging is to adjust the
+target frame position and orientation by small amount of
+displacement. You can send
+[`JogFrame` message](https://github.com/tork-a/jog_control/blob/master/jog_msgs/msg/JogFrame.msg)
+to command the target frame and differential displacement of position
+and orientation.
+
+### Subscribed topic
+
+- joint_states (sensor_msgs/JointState)
+
+  Current joint states (angle, velocity, acceleration)
+
+- jog_frame (jog_msgs/JogFrame)
+  
+  Jog command for target frame
+
+### Required service / action
+
+This package depends on move_group of MoveIt! to compute
+kinematics. 
+
+- /compute_ik
+  
+  Service to get inverse kinematics by MoveIt!
+
+- /compute_fk
+  
+  Service to get forward kinematics by MoveIt!
+
+This package uses position_cotnroller to control joint angles. It read
+the controller configuration form MoveIt! parameter
+(move_group/controller_list), so MoveIt! should be available before this
+node starting.
+  
+- follow_joint_trajecotry/goal (control_msgs/FollowJointTrajectoryAction)
+
+  The goal joint angle to control
+
+## Creating setting files for your own robot
+
+You need a launch file and a configuration file your robot to use
+jog_controller. Let me show you the setting using 'tra1' robot as a
+example in the following description. You can install tra1 package as:
 
 ```
-$ apt install ros-kinetic-jog-control
+$ apt install ros-knetic-tra1-bringup
 ```
 
-## Install from source
+### Create your own package
+
+You are recommended to create your own package to store the
+configuration file.
 
 ```
-$ source /opt/ros/kinetic/setup.bash
-$ mkdir -p ws/src
-$ cd ws
-$ wstool init src
-$ wstool set -t src jog_control --git http://github.com/tork-a/jog_control
-$ wstool update -t src
-$ rosdep install -r --from-path src --ignore-src
-$ catkin build
-$ source devel/setup.bash
+$ catkin_create_pkg tra1_jog_config jog_controller tra1_bringup
 ```
 
-## UR3 and UR5(Gazebo and MoveIt!)
+### Checking your robot configuration
 
-![UR5 jog control](image/ur5_jog.png)
-
-Launch simulation and MoveIt! (Replace ur5 to ur3 if you need)
-
-```
-$ roslaunch ur_gazebo ur5_joint_limited.launch
-$ roslaunch ur5_moveit_config ur5_moveit_planning_execution.launch sim:=true
-$ roslaunch ur5_moveit_config moveit_rviz.launch config:=true
-```
-
-And launch jog nodes.
+jog_controller depends on MoveIt!, thus your robot need to work with
+MoveIt! already. Please check you have your moveit_config package such
+as 'tra1_moveit_config'.
 
 ```
-$ roslaunch jog_launch ur5.launch
+$ rospack find tra1_moveit_config
+$ roscd tra1_moveit_config/config
 ```
 
-## UR5(fake_joint)
-
-You can use `fake_joint` package to use the perfect joint
-controller. Just launch:
+Then you can check the Moveit! config file. First check the
+`tra1_controllers.yaml` to see the joint list.
 
 ```
-$ roslaunch jog_launch ur5.launch use_fake_joint:=true use_moveit:=true use_rviz:=true
+$ cat tra1_controllers.yaml
+controller_manager_ns: controller_manager
+controller_list:
+  - name: position_trajectory_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+      - joint6
 ```
 
-## TRA1 (Simulation mode)
+It says the list of the joint in `joints:` field. Please note that you
+may have two or more controllers in your robot and the joints are
+separated in each controllers.
 
-![TRA1 jog control](image/tra1_jog.png)
+Then you can check the tra1.srdf. In this file, you can see the
+group name, and target link which are used in MoveIt!.
 
-Launch simulation and MoveIt!
+```
+$ cat tra1.srdf
+...
+<group name="manipulator">
+    <chain base_link="base_link" tip_link="link_j6" />
+</group>
+...
+```
+
+It says it contains the group named 'manipulator' and target link is
+named 'link_j6'. Please notice you may have multiple groups in dual
+arm robot.
+
+### Creating config YAML file
+
+Create tra1_jog_config/config/tra1_jog.yaml file to set the parameters for each
+node.
+
+```
+jog_joint_node:
+  joint_names:
+    - joint1
+    - joint2
+    - joint3
+    - joint4
+    - joint5
+    - joint6
+
+jog_frame_node:
+  group_names:
+    - manipulator
+  link_names:
+    - link_j6
+```
+
+'joint_names:' should contain the joint names which you have seen in
+the MoveIt! config file. Only joints in this list are used in the jog
+control and you don't need to specify unused joints. You cannot
+specify any joints not in the MoveIt! config file.
+
+'group_names' should be a list of group name which you have seen in
+the MoveIt! config file. And 'link_names:' is a list of target frame
+which you want to control with jog_frame_node.
+
+### Creating launch file
+
+Create the launch file as tra1_jog_config/launch/tra1_jog.launch .
+
+```
+<launch>
+  <arg name="use_joy" default="false"/>
+
+  <!-- Jog controllers -->
+  <rosparam command="load"
+	    file="$(find tra1_jog_config)/config/tra1_jog.yaml"/>
+  <node name="jog_joint_node" pkg="jog_controller" type="jog_joint_node"/>
+  <node name="jog_frame_node" pkg="jog_controller" type="jog_frame_node"/>
+
+  <!-- Launch joypad -->
+  <include if="$(arg use_joy)" file="$(find jog_controller)/launch/joypad.launch">
+    <arg name="group_name" value="manipulator"/>
+    <arg name="frame_id" value="base_link"/>
+    <arg name="link_name" value="link_j6"/>
+  </include>
+  
+</launch>
+```
+
+If you want to use joypad to jog, you can set `use_jog` argument
+true. Caution: joypad support is experimental.
+
+## Check the jog control with your robot
+
+### Check with rviz jog panel plugin
+
+Fisrtly you should bring your own robot system and MoveIt!. It depends
+on how you created the system for your robot. With tra1, we can start
+the controller in simulation (loopback) mode as:
 
 ```
 $ roslaunch tra1_bringup tra1_bringup.launch simulation:=true
 $ roslaunch tra1_bringup tra1_moveit.launch 
 ```
 
-And launch jog nodes.
+Now you can see the rviz window for MoveIt!.
+
+![TRA1 jog control](../image/tra1_jog.png)
+
+### rviz jog control panel plugin
+
+From rviz menu, you can choose "Panels" -> "Add New Panel". You can
+see JogJointPanel and JogFramePanel in the list. Choose it and push
+"OK" button, and you can add the panels on the left side of you rviz
+window.
+
+![jog_controller rviz panel plugin](../image/jog_panel_plugin.png)
+
+Please notice you can drag the panels to adjust the size and position
+in the rviz pane.
+
+### joypad
+
+`joypad.launch` is the launch file to bringup joypad driver (joy node)
+and the converter node (joy_to_jog_frame.py). This launch file have
+following arguments.
+
+- `joy_dev` (default: /dev/input/js0)
+
+  The device file name of the joypad. Specify the defice file name of
+  your joypad here. You can check your device by `ls /dev/input`
+  command.
+
+- `joy_config` (default: xbox_wireless)
+
+  Configure file to setup button asignments. You can find an example
+  in `config/xbox_wireless.config.yaml`. Notice you need to modify the
+  config file to fit your joypad device.
+
+- `group_name` (default: manipulator)
+
+  This is the MoveIt! group name to jog. It need to be identical to
+  the group name you want to use.
+
+- `link_name` (default: tool0)
+
+  This is the link_name to jog. You need to specify valid frame name
+  in the group.
+  
+- `frame_id`
+
+  Reference frame for frame jogging. You can specify valid frame name
+  such as `base_link`, `tool0` and so on.
+  
+Please check your joypad is available by launching joypad.launch.
 
 ```
-$ roslaunch jog_launch tra1.launch
+$ roslaunch jog_controller joypad.launch
 ```
 
-## TRA1 (fake_joint)
-
-You can use `fake_joint` package to use the perfect joint
-controller. Just launch:
+If you got error like:
 
 ```
-$ roslaunch jog_launch tra1.launch use_fake_joint:=true use_moveit:=true use_rviz:=true
+[ERROR] [1533283649.439653297]: Couldn't open joystick /dev/input/js0. Will retry every second.
 ```
 
+then check the joypad connection and you can see device file in
+`/dev/input/`. Please note some joypad need to be powered on. (XBox
+wireless has a silver power button shaped round 'X' in front of the
+joypad.)
 
-## Denso VS060
-
-![Denso VS060 jog control](image/vs060_jog.png)
-
-Launch simulation and MoveIt!
-
-```
-$ roslaunch denso_launch denso_vs060_moveit_demo_simulation.launch 
-```
-
-And launch jog nodes.
+If you have no error, please check if the jog_frame topic is
+published.
 
 ```
-$ roslaunch jog_launch vs060.launch
+$ rostopic echo /jog_frame
 ```
 
-## NEXTAGE Open (OpenRTM simulation)
-
-![NEXTAGE Open jog control](image/nextage_jog.png)
-
-Launch simulation and MoveIt!
+You need to push 'Enable' button which is set by the `enable_button`
+parameter in the config file. You can see message like:
 
 ```
-$ rtmlaunch nextage_ros_bridge nextage_ros_bridge_simulation.launch
-$ roslaunch nextage_moveit_config moveit_planning_execution.launch 
+header: 
+  seq: 751
+  stamp: 
+    secs: 1531982605
+    nsecs: 330952195
+  frame_id: "base_link"
+group_name: "manipulator"
+link_name: "tool0"
+linear_delta: 
+  x: 0.0
+  y: -0.0
+  z: -0.0
+angular_delta: 
+  x: 0.0
+  y: 0.0
+  z: 0.0
+avoid_collisions: True
 ```
 
-And launch jog nodes.
-
-```
-$ roslaunch jog_launch nextage.launch
-```
-
-## NEXTAGE Open (fake_joint)
-
-You can use `fake_joint` package to use the perfect joint
-controller. Just launch:
-
-```
-$ roslaunch jog_launch nextage.launch use_fake_joint:=true use_moveit:=true
-```
-
-## ABB IRB2400
-
-![ABB IRB2400 jog control](image/abb_irb2400_jog.png)
-
-(CAUTION: The model of this robot is a bit strange in joint limits.
-The jog may not move because of joints flipping.)
-
-Launch simulation and MoveIt!
-
-```
-$ roslaunch abb_irb2400_moveit_config moveit_planning_execution.launch 
-```
-
-And launch jog nodes.
-
-```
-$ roslaunch jog_launch abb_irb2400.launch 
-```
-
-## MOTOMAN SIA20D
-
-![MOTOMAN SIA20D jog control](image/motoman_sia20d_jog.png)
-
-Launch simulation and MoveIt!
-
-```
-$ roslaunch motoman_sia20d_moveit_config moveit_planning_execution.launch sim:=true
-```
-
-And launch jog nodes.
-
-```
-$ roslaunch jog_launch motoman_sia20d.launch
-```
-
-## MOTOMAN SDA10F
-
-![MOTOMAN SDA10F jog control](image/motoman_sda10f_jog.png)
-
-This is another dual arm robot by Yaskawa MOTOMAN.
-
-Launch simulation and MoveIt!
-
-```
-$ roslaunch motoman_sda10f_moveit_config moveit_planning_execution.launch sim:=true
-```
-
-And launch jog nodes.
-
-```
-$ roslaunch jog_launch motoman_sda10f.launch 
-```
-
-## rviz JogFramePanel Pugin
-
-You ca add new panel JogFramePanel in rviz. 
-
-## Joypad control
-
-You can also use a joypad. Please consult
-[jog_controller/README.md](jog_controller/README.md)
-
-## Teaching pendant
-
-You can also use a teaching pendant.
-TBA.
-
-# Packages
-
-## [jog_msgs](jog_msgs/README.md)
-
-`jog_msgs` is a ROS message package for jog control.
-
-## [jog_controller](jog_controller/README.md)
-
-`jog_controller` contains ROS nodes for jog control.
-
-# CAUTION
-
-- Please take extra care when you use this package with real robot, seriously!
-- You need to launch MoveIt! before start jog_controllers
-  - https://github.com/tork-a/jog_control/issues/18
-
-# TODO
-
-- Wiser target picking (group name, target link, etc)
-- Marker visualization for target link and base link
-- Dynamic reconfigure for jog_controller
+and check your sticks produce desired message.
