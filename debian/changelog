@@ -1,0 +1,9 @@
+ros-kinetic-jog-control (0.0.1-0xenial) xenial; urgency=high
+
+  * Prepare for releasing
+    * Add jog_control meta-package
+  * Contributors: Ryosuke Tajima
+
+ -- Tokyo Opensource Robotics Kyokai (TORK) Developer Team <dev@opensource-robotics.tokyo.jp>  Wed, 29 Aug 2018 15:00:00 -0000
+
+
