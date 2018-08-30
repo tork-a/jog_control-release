@@ -1,0 +1,12 @@
+Source: ros-kinetic-jog-controller
+Section: misc
+Priority: extra
+Maintainer: Tokyo Opensource Robotics Kyokai(TORK) Developer Team <dev@opensource-robotics.tokyo.jp>
+Build-Depends: debhelper (>= 9.0.0), ros-kinetic-actionlib, ros-kinetic-catkin, ros-kinetic-control-msgs, ros-kinetic-jog-msgs, ros-kinetic-moveit-core, ros-kinetic-moveit-msgs, ros-kinetic-moveit-ros-planning, ros-kinetic-moveit-visual-tools, ros-kinetic-roscpp, ros-kinetic-roslaunch, ros-kinetic-rviz
+Homepage: http://wiki.ros.org/jog_controller
+Standards-Version: 3.9.2
+
+Package: ros-kinetic-jog-controller
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-kinetic-actionlib, ros-kinetic-control-msgs, ros-kinetic-jog-msgs, ros-kinetic-joy, ros-kinetic-moveit-core, ros-kinetic-moveit-msgs, ros-kinetic-moveit-ros-planning, ros-kinetic-moveit-visual-tools, ros-kinetic-roscpp, ros-kinetic-rviz
+Description: The jog_controller package
