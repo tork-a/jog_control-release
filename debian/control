@@ -1,0 +1,12 @@
+Source: ros-kinetic-jog-launch
+Section: misc
+Priority: extra
+Maintainer: Tokyo Opensource Robotics Kyokai (TORK) Developer Team <dev@opensource-robotics.tokyo.jp>
+Build-Depends: debhelper (>= 9.0.0), ros-kinetic-catkin, ros-kinetic-fake-joint-launch, ros-kinetic-jog-controller, ros-kinetic-roslaunch, ros-kinetic-rostest
+Homepage: http://wiki.ros.org/jog_launch
+Standards-Version: 3.9.2
+
+Package: ros-kinetic-jog-launch
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-kinetic-fake-joint-launch, ros-kinetic-jog-controller, ros-kinetic-nextage-moveit-config, ros-kinetic-roslaunch, ros-kinetic-rostest, ros-kinetic-tra1-moveit-config, ros-kinetic-ur3-moveit-config, ros-kinetic-ur5-moveit-config
+Description: Collection of the launch files for jog_controller
